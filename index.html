@@ -6,9 +6,9 @@
     <title>Liquid Glass Rubik's Cube</title>
     <style>
         :root {
-            --glass-bg: rgba(20, 20, 25, 0.4);
-            --glass-border: rgba(255, 255, 255, 0.1);
-            --glass-highlight: rgba(255, 255, 255, 0.05);
+            --glass-bg: rgba(20, 20, 25, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.15);
+            --glass-highlight: rgba(255, 255, 255, 0.1);
             --neon-accent: #00f3ff;
             --text-color: #ffffff;
             --font-main: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -48,7 +48,7 @@
             box-sizing: border-box;
         }
 
-        /* --- HEADER --- */
+        /* --- HEADER & SETTINGS --- */
         .hud-top {
             display: flex;
             justify-content: space-between;
@@ -81,6 +81,82 @@
             color: var(--neon-accent);
         }
 
+        /* --- SETTINGS BUTTON --- */
+        #settings-wrapper {
+            position: relative;
+            pointer-events: auto;
+        }
+
+        #settings-btn {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            color: #fff;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        #settings-btn:hover {
+            background: var(--neon-accent);
+            color: #000;
+            transform: rotate(90deg);
+        }
+
+        #settings-menu {
+            position: absolute;
+            top: 55px;
+            right: 0;
+            background: rgba(10, 10, 15, 0.95);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            width: 120px;
+            opacity: 0;
+            transform: translateY(-10px);
+            pointer-events: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        #settings-menu.active {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        .quality-btn {
+            background: transparent;
+            border: 1px solid transparent;
+            color: #aaa;
+            padding: 8px;
+            text-align: left;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .quality-btn:hover {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+        }
+
+        .quality-btn.selected {
+            background: rgba(0, 243, 255, 0.15);
+            color: var(--neon-accent);
+            border-color: rgba(0, 243, 255, 0.3);
+            font-weight: bold;
+        }
+
         /* --- TIMER --- */
         #timer-container {
             background: var(--glass-bg);
@@ -91,6 +167,8 @@
             border-radius: 12px;
             pointer-events: auto;
             box-shadow: 0 4px 30px rgba(0,0,0,0.3);
+            margin-top: 10px;
+            align-self: flex-start;
         }
 
         #timer {
@@ -130,7 +208,7 @@
             flex-wrap: wrap;
         }
 
-        button {
+        button.action-btn {
             background: rgba(255, 255, 255, 0.03);
             border: 1px solid rgba(255,255,255,0.1);
             color: #fff;
@@ -151,7 +229,7 @@
             gap: 8px;
         }
 
-        button:hover {
+        button.action-btn:hover {
             background: rgba(255, 255, 255, 0.1);
             border-color: var(--neon-accent);
             color: var(--neon-accent);
@@ -159,7 +237,7 @@
             transform: translateY(-2px);
         }
 
-        button:active {
+        button.action-btn:active {
             transform: translateY(0);
         }
 
@@ -228,23 +306,10 @@
             transition: opacity 0.5s;
         }
 
-        /* --- SOUND NOTIFICATION --- */
-        #sound-init {
-            position: absolute;
-            bottom: 20px; left: 50%; transform: translateX(-50%);
-            color: rgba(255,255,255,0.5);
-            font-size: 0.7rem;
-            z-index: 5;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 1s;
-        }
-
         /* --- RESPONSIVE DESIGN --- */
         @media (max-width: 768px) {
             .hud-top {
-                padding-bottom: 0;
-                align-items: center;
+                align-items: flex-start;
             }
             h1 { font-size: 1.4rem; }
             .subtitle { font-size: 0.6rem; }
@@ -260,7 +325,7 @@
                 border-bottom: none;
             }
             
-            button {
+            button.action-btn {
                 padding: 15px;
                 font-size: 0.85rem;
             }
@@ -285,12 +350,30 @@
 
     <div id="ui-container">
         <div class="hud-top">
-            <div class="title-block">
-                <h1>Liquid Cube</h1>
-                <div class="subtitle">ASMR EDITION</div>
+            <div style="display:flex; flex-direction:column;">
+                <div class="title-block">
+                    <h1>Liquid Cube</h1>
+                    <div class="subtitle">ASMR EDITION</div>
+                </div>
+                <div id="timer-container">
+                    <div id="timer">00:00.00</div>
+                </div>
             </div>
-            <div id="timer-container">
-                <div id="timer">00:00.00</div>
+
+            <!-- SETTINGS BUTTON -->
+            <div id="settings-wrapper">
+                <div id="settings-btn">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                </div>
+                <div id="settings-menu">
+                    <div style="color:white; font-size:0.7rem; opacity:0.6; padding:0 5px;">GRAFICA</div>
+                    <button class="quality-btn selected" onclick="updateQuality('high')">ALTO</button>
+                    <button class="quality-btn" onclick="updateQuality('medium')">MEDIO</button>
+                    <button class="quality-btn" onclick="updateQuality('low')">BASSO</button>
+                </div>
             </div>
         </div>
 
@@ -299,12 +382,10 @@
             <div><span class="key">Drag</span> Ruota Strato</div>
         </div>
 
-        <div id="sound-init">Clicca per attivare l'audio ASMR</div>
-
         <div class="hud-bottom">
             <div class="button-row">
-                <button id="btn-scramble">🎲 Mescola</button>
-                <button id="btn-reset">↺ Reset</button>
+                <button id="btn-scramble" class="action-btn">🎲 Mescola</button>
+                <button id="btn-reset" class="action-btn">↺ Reset</button>
             </div>
         </div>
     </div>
@@ -314,7 +395,7 @@
             <h2 style="color: var(--neon-accent); font-size: 3rem; margin: 0; text-shadow: 0 0 20px rgba(0,243,255,0.5);">COMPLETO!</h2>
             <div style="color: #ccc; margin-top: 10px;">TEMPO TOTALE</div>
             <p id="final-time" style="font-size: 2.5rem; margin: 10px 0; font-family: monospace; font-weight: bold;">00:00.00</p>
-            <button id="btn-play-again" style="margin-top: 20px; width: 100%; background: var(--neon-accent); color: #000;">Nuova Partita</button>
+            <button id="btn-play-again" class="action-btn" style="margin-top: 20px; width: 100%; background: var(--neon-accent); color: #000;">Nuova Partita</button>
         </div>
     </div>
 
@@ -337,83 +418,52 @@
                     const AudioContext = window.AudioContext || window.webkitAudioContext;
                     this.ctx = new AudioContext();
                     this.isInit = true;
-                    
-                    // Create a silent buffer to unlock audio on iOS
+                    // Silent buffer unlock for mobile
                     const buffer = this.ctx.createBuffer(1, 1, 22050);
                     const source = this.ctx.createBufferSource();
                     source.buffer = buffer;
                     source.connect(this.ctx.destination);
                     source.start(0);
-                    
-                    document.getElementById('sound-init').style.opacity = 0;
-                } catch(e) {
-                    console.warn("Audio init failed", e);
-                }
+                } catch(e) {}
             }
 
             playMove() {
                 if (!this.isInit || !this.ctx) return;
                 if (this.ctx.state === 'suspended') this.ctx.resume();
-
                 const t = this.ctx.currentTime;
                 
-                // 1. Friction Noise (Sliding plastic)
-                const bufferSize = this.ctx.sampleRate * 0.15; // 150ms
-                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-                const data = buffer.getChannelData(0);
-                for (let i = 0; i < bufferSize; i++) {
-                    data[i] = (Math.random() * 2 - 1) * 0.5; // White noise
-                }
+                // Noise (Friction)
+                const bufSize = this.ctx.sampleRate * 0.15;
+                const buf = this.ctx.createBuffer(1, bufSize, this.ctx.sampleRate);
+                const data = buf.getChannelData(0);
+                for (let i = 0; i < bufSize; i++) data[i] = (Math.random()*2-1)*0.5;
+                const nSrc = this.ctx.createBufferSource(); nSrc.buffer = buf;
+                const nFilt = this.ctx.createBiquadFilter(); nFilt.type='lowpass'; 
+                nFilt.frequency.setValueAtTime(800,t); nFilt.frequency.exponentialRampToValueAtTime(100,t+0.15);
+                const nGain = this.ctx.createGain(); nGain.gain.setValueAtTime(0.3,t); nGain.gain.exponentialRampToValueAtTime(0.01,t+0.1);
+                nSrc.connect(nFilt); nFilt.connect(nGain); nGain.connect(this.ctx.destination); nSrc.start(t);
 
-                const noiseSrc = this.ctx.createBufferSource();
-                noiseSrc.buffer = buffer;
-                
-                const noiseFilter = this.ctx.createBiquadFilter();
-                noiseFilter.type = 'lowpass';
-                noiseFilter.frequency.setValueAtTime(800, t);
-                noiseFilter.frequency.exponentialRampToValueAtTime(100, t + 0.15);
-
-                const noiseGain = this.ctx.createGain();
-                noiseGain.gain.setValueAtTime(0.3, t);
-                noiseGain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
-
-                noiseSrc.connect(noiseFilter);
-                noiseFilter.connect(noiseGain);
-                noiseGain.connect(this.ctx.destination);
-                noiseSrc.start(t);
-
-                // 2. Click/Snap (Mechanical stop)
-                // Slight delay to simulate the end of the turn
-                const clickOsc = this.ctx.createOscillator();
-                clickOsc.type = 'triangle';
-                clickOsc.frequency.setValueAtTime(150, t + 0.05);
-                clickOsc.frequency.exponentialRampToValueAtTime(40, t + 0.1);
-
-                const clickGain = this.ctx.createGain();
-                clickGain.gain.setValueAtTime(0, t + 0.05);
-                clickGain.gain.linearRampToValueAtTime(0.5, t + 0.06);
-                clickGain.gain.exponentialRampToValueAtTime(0.01, t + 0.15);
-
-                clickOsc.connect(clickGain);
-                clickGain.connect(this.ctx.destination);
-                clickOsc.start(t + 0.05);
-                clickOsc.stop(t + 0.2);
+                // Click
+                const cOsc = this.ctx.createOscillator(); cOsc.type='triangle';
+                cOsc.frequency.setValueAtTime(150, t+0.05); cOsc.frequency.exponentialRampToValueAtTime(40, t+0.1);
+                const cGain = this.ctx.createGain(); cGain.gain.setValueAtTime(0, t+0.05); cGain.gain.linearRampToValueAtTime(0.5, t+0.06); cGain.gain.exponentialRampToValueAtTime(0.01, t+0.15);
+                cOsc.connect(cGain); cGain.connect(this.ctx.destination); cOsc.start(t+0.05); cOsc.stop(t+0.2);
             }
         }
-
         const soundEngine = new SoundEngine();
 
         // --- Variabili Globali ---
         let scene, camera, renderer, controls;
         let cubes = [];
         let isAnimating = false;
+        let currentQuality = 'high'; // high, medium, low
+        let mainLight; // Riferimento alla luce per toggle ombre
         
         // Logica di gioco
         const cubeSize = 1;
         const gap = 0.04; 
         const totalSize = cubeSize + gap;
         
-        // Raycasting
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
         let startMouse = new THREE.Vector2();
@@ -421,21 +471,29 @@
         let intersectedNormal = null;
         let isDragging = false;
 
-        // Timer
         let startTime = 0;
         let timerInterval = null;
         let isTimerRunning = false;
         let moveCount = 0;
 
-        // Palette Colori "Vivid Neon"
         let colors = {
-            base: 0x0a0a0a, // Nucleo quasi nero
-            R: 0xff0040, // Rosso Intenso
-            L: 0xff6600, // Arancio Profondo
-            U: 0xffffff, // Bianco Puro
-            D: 0xffcc00, // Giallo Oro
-            F: 0x00ff66, // Verde Smeraldo
-            B: 0x0066ff  // Blu Elettrico
+            base: 0x0a0a0a, R: 0xff0040, L: 0xff6600, U: 0xffffff, 
+            D: 0xffcc00, F: 0x00ff66, B: 0x0066ff
+        };
+
+        // Espongo funzione globale per il menu HTML
+        window.updateQuality = function(level) {
+            currentQuality = level;
+            
+            // Update UI
+            document.querySelectorAll('.quality-btn').forEach(b => b.classList.remove('selected'));
+            event.target.classList.add('selected');
+            
+            // Close menu
+            document.getElementById('settings-menu').classList.remove('active');
+            
+            // Re-apply visual settings without losing state
+            applyGraphicsSettings();
         };
 
         init();
@@ -444,7 +502,6 @@
         function init() {
             const container = document.getElementById('canvas-container');
             
-            // 1. Scena & Camera
             scene = new THREE.Scene();
             scene.fog = new THREE.FogExp2(0x050505, 0.02);
             
@@ -452,7 +509,7 @@
             adjustCameraPosition(); 
             camera.lookAt(0, 0, 0);
 
-            // 2. Renderer High Quality
+            // Renderer setup (start high)
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
@@ -462,7 +519,7 @@
             renderer.toneMappingExposure = 1.0; 
             container.appendChild(renderer.domElement);
 
-            // 3. Ambiente & Luci
+            // Env
             const pmremGenerator = new THREE.PMREMGenerator(renderer);
             pmremGenerator.compileEquirectangularShader();
             scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
@@ -470,13 +527,14 @@
             const ambientLight = new THREE.AmbientLight(0x222222, 2);
             scene.add(ambientLight);
 
-            const mainLight = new THREE.DirectionalLight(0xffffff, 3);
+            mainLight = new THREE.DirectionalLight(0xffffff, 3);
             mainLight.position.set(5, 10, 7);
             mainLight.castShadow = true;
             mainLight.shadow.mapSize.width = 2048;
             mainLight.shadow.mapSize.height = 2048;
             scene.add(mainLight);
 
+            // Rim lights (cosmetic)
             const rimLight1 = new THREE.SpotLight(colors.B, 10);
             rimLight1.position.set(-10, 0, -5);
             rimLight1.lookAt(0,0,0);
@@ -484,403 +542,4 @@
 
             const rimLight2 = new THREE.SpotLight(colors.R, 8);
             rimLight2.position.set(10, -5, 5);
-            rimLight2.lookAt(0,0,0);
-            scene.add(rimLight2);
-            
-            createStars();
-
-            // 4. Controlli
-            controls = new OrbitControls(camera, renderer.domElement);
-            controls.enableDamping = true;
-            controls.dampingFactor = 0.05;
-            controls.enablePan = false;
-            controls.minDistance = 4;
-            controls.maxDistance = 20;
-            // IMPORTANTE: Disabilitare autoRotate all'avvio
-            controls.autoRotate = false;
-
-            // 5. Cubo
-            createRubiksCube();
-
-            // 6. Listeners
-            window.addEventListener('resize', onWindowResize);
-            
-            const canvas = renderer.domElement;
-            
-            // Interaction Handlers (including sound init)
-            const startInteraction = (e) => {
-                soundEngine.init();
-                // Check if touch or mouse
-                if (e.type === 'touchstart') {
-                    handleInputStart(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
-                } else {
-                    handleInputStart(e.clientX, e.clientY);
-                }
-            };
-
-            canvas.addEventListener('mousedown', startInteraction);
-            window.addEventListener('mousemove', onMouseMove);
-            window.addEventListener('mouseup', onMouseUp);
-            canvas.addEventListener('touchstart', startInteraction, {passive: false});
-            window.addEventListener('touchmove', onTouchMove, {passive: false});
-            window.addEventListener('touchend', onTouchEnd);
-
-            document.getElementById('btn-scramble').addEventListener('click', () => {
-                soundEngine.init();
-                scrambleCube(20);
-            });
-            document.getElementById('btn-reset').addEventListener('click', () => {
-                soundEngine.init();
-                resetCube();
-            });
-
-            document.getElementById('btn-play-again').addEventListener('click', () => {
-                document.getElementById('victory-modal').classList.remove('active');
-                scrambleCube(20);
-            });
-            
-            // Show sound hint for a bit then fade
-            setTimeout(() => {
-                document.getElementById('sound-init').style.opacity = 1;
-                setTimeout(() => {
-                    if(!soundEngine.isInit) document.getElementById('sound-init').style.opacity = 0;
-                }, 4000);
-            }, 1000);
-
-            setTimeout(() => {
-                document.getElementById('loading').style.opacity = 0;
-                setTimeout(() => document.getElementById('loading').style.display = 'none', 500);
-            }, 800);
-        }
-
-        // --- Responsive Camera ---
-        function adjustCameraPosition() {
-            const aspect = window.innerWidth / window.innerHeight;
-            if (aspect < 1) {
-                camera.position.set(7, 7, 7);
-            } else {
-                camera.position.set(5.5, 4.5, 5.5);
-            }
-        }
-
-        // --- Effetti Grafici ---
-        function createStars() {
-            const particlesGeo = new THREE.BufferGeometry();
-            const count = 500;
-            const posArray = new Float32Array(count * 3);
-            for(let i = 0; i < count * 3; i++) {
-                posArray[i] = (Math.random() - 0.5) * 40;
-            }
-            particlesGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
-            const particlesMat = new THREE.PointsMaterial({
-                size: 0.05,
-                color: 0xffffff,
-                transparent: true,
-                opacity: 0.4
-            });
-            const starField = new THREE.Points(particlesGeo, particlesMat);
-            scene.add(starField);
-        }
-
-        // --- Creazione Cubo ---
-        function createRubiksCube() {
-            cubes.forEach(c => scene.remove(c));
-            cubes = [];
-
-            const glassParams = {
-                transmission: 0.99,
-                thickness: 0.8,
-                roughness: 0.04,
-                metalness: 0.05,
-                ior: 1.6,
-                clearcoat: 1.0,
-                clearcoatRoughness: 0.02,
-                attenuationDistance: 0.5 
-            };
-
-            const geometry = new RoundedBoxGeometry(cubeSize, cubeSize, cubeSize, 4, 0.1);
-
-            for (let x = -1; x <= 1; x++) {
-                for (let y = -1; y <= 1; y++) {
-                    for (let z = -1; z <= 1; z++) {
-                        const materials = [];
-                        materials.push(createLiquidMaterial(x === 1 ? colors.R : colors.base, glassParams));
-                        materials.push(createLiquidMaterial(x === -1 ? colors.L : colors.base, glassParams));
-                        materials.push(createLiquidMaterial(y === 1 ? colors.U : colors.base, glassParams));
-                        materials.push(createLiquidMaterial(y === -1 ? colors.D : colors.base, glassParams));
-                        materials.push(createLiquidMaterial(z === 1 ? colors.F : colors.base, glassParams));
-                        materials.push(createLiquidMaterial(z === -1 ? colors.B : colors.base, glassParams));
-
-                        const mesh = new THREE.Mesh(geometry, materials);
-                        mesh.position.set(x * totalSize, y * totalSize, z * totalSize);
-                        mesh.userData = { initialPosition: new THREE.Vector3(x, y, z), isCube: true };
-                        mesh.castShadow = true;
-                        mesh.receiveShadow = true;
-                        
-                        const coreGeo = new THREE.BoxGeometry(cubeSize * 0.65, cubeSize * 0.65, cubeSize * 0.65);
-                        const coreMat = new THREE.MeshPhysicalMaterial({ 
-                            color: 0x111111,
-                            roughness: 0.7,
-                            metalness: 0.5,
-                            emissive: 0x000000
-                        });
-                        const core = new THREE.Mesh(coreGeo, coreMat);
-                        mesh.add(core);
-
-                        scene.add(mesh);
-                        cubes.push(mesh);
-                    }
-                }
-            }
-        }
-
-        function createLiquidMaterial(colorHex, params) {
-            const isBase = colorHex === colors.base;
-            const attenuation = isBase ? 0x000000 : colorHex;
-            
-            return new THREE.MeshPhysicalMaterial({
-                color: isBase ? 0x111111 : colorHex, 
-                emissive: isBase ? 0x000000 : colorHex,
-                emissiveIntensity: isBase ? 0 : 0.4,
-                transmission: isBase ? params.transmission : 0.5,
-                opacity: 1,
-                metalness: params.metalness,
-                roughness: params.roughness,
-                ior: params.ior,
-                thickness: params.thickness,
-                clearcoat: params.clearcoat,
-                side: THREE.DoubleSide,
-                attenuationColor: attenuation,
-                attenuationDistance: params.attenuationDistance
-            });
-        }
-
-        // --- Logica Input ---
-        function getIntersects(clientX, clientY) {
-            const rect = renderer.domElement.getBoundingClientRect();
-            mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1;
-            mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1;
-            raycaster.setFromCamera(mouse, camera);
-            return raycaster.intersectObjects(cubes);
-        }
-
-        function handleInputStart(cx, cy) {
-            if (isAnimating) return;
-            const intersects = getIntersects(cx, cy);
-            
-            if (intersects.length > 0) {
-                controls.enabled = false;
-                intersectedObject = intersects[0].object;
-                intersectedNormal = intersects[0].face.normal.clone();
-                intersectedNormal.transformDirection(intersectedObject.matrixWorld).round();
-                startMouse.set(cx, cy);
-                isDragging = true;
-            } else {
-                controls.enabled = true;
-            }
-        }
-
-        function onMouseMove(e) { handleInputMove(e.clientX, e.clientY); }
-        function onTouchMove(e) { e.preventDefault(); handleInputMove(e.changedTouches[0].clientX, e.changedTouches[0].clientY); }
-
-        function handleInputMove(cx, cy) {
-            if (!isDragging || isAnimating || !intersectedObject) return;
-
-            const deltaX = cx - startMouse.x;
-            const deltaY = cy - startMouse.y;
-            if (Math.abs(deltaX) < 15 && Math.abs(deltaY) < 15) return;
-
-            const nx = Math.abs(intersectedNormal.x);
-            const ny = Math.abs(intersectedNormal.y);
-            let rotateAxis, rotateDir;
-            
-            if (ny > 0.5) {
-                if (Math.abs(deltaX) > Math.abs(deltaY)) { rotateAxis = 'z'; rotateDir = deltaX > 0 ? -1 : 1; }
-                else { rotateAxis = 'x'; rotateDir = deltaY > 0 ? -1 : 1; }
-            } else if (nx > 0.5) {
-                if (Math.abs(deltaY) > Math.abs(deltaX)) { rotateAxis = 'z'; rotateDir = deltaY > 0 ? -1 : 1; }
-                else { rotateAxis = 'y'; rotateDir = deltaX > 0 ? 1 : -1; }
-            } else {
-                if (Math.abs(deltaX) > Math.abs(deltaY)) { rotateAxis = 'y'; rotateDir = deltaX > 0 ? 1 : -1; }
-                else { rotateAxis = 'x'; rotateDir = deltaY > 0 ? 1 : -1; }
-            }
-            
-            const pos = intersectedObject.position.clone();
-            pos.x = Math.round(pos.x / totalSize);
-            pos.y = Math.round(pos.y / totalSize);
-            pos.z = Math.round(pos.z / totalSize);
-
-            let layerIndex;
-            if (rotateAxis === 'x') layerIndex = pos.x;
-            if (rotateAxis === 'y') layerIndex = pos.y;
-            if (rotateAxis === 'z') layerIndex = pos.z;
-
-            rotateLayer(rotateAxis, layerIndex, rotateDir * 90, true);
-            isDragging = false;
-        }
-
-        function onMouseUp() { isDragging = false; controls.enabled = true; }
-        function onTouchEnd() { isDragging = false; controls.enabled = true; }
-
-        function rotateLayer(axis, index, angleDeg, animate = true, duration = 300) {
-            if (isAnimating && animate) return;
-            if (animate && !isTimerRunning && moveCount === 0) startTimer();
-            if (animate) moveCount++;
-
-            // PLAY ASMR SOUND
-            if (animate) soundEngine.playMove();
-
-            const angleRad = THREE.MathUtils.degToRad(angleDeg);
-            const activeCubes = [];
-            
-            cubes.forEach(cube => {
-                let localPos = cube.position.clone().divideScalar(totalSize);
-                let val = axis === 'x' ? localPos.x : (axis === 'y' ? localPos.y : localPos.z);
-                if (Math.abs(val - index) < 0.1) activeCubes.push(cube);
-            });
-
-            const pivot = new THREE.Object3D();
-            pivot.rotation.set(0,0,0);
-            scene.add(pivot);
-            activeCubes.forEach(c => pivot.attach(c));
-
-            if (animate) {
-                isAnimating = true;
-                const axisVec = new THREE.Vector3(axis==='x'?1:0, axis==='y'?1:0, axis==='z'?1:0);
-                const startT = Date.now();
-                
-                function loop() {
-                    const elapsed = Date.now() - startT;
-                    const progress = Math.min(elapsed / duration, 1);
-                    const ease = 1 - Math.pow(1 - progress, 4);
-                    pivot.setRotationFromAxisAngle(axisVec, angleRad * ease);
-
-                    if (progress < 1) requestAnimationFrame(loop);
-                    else {
-                        finishRotation(pivot, activeCubes);
-                        checkSolved();
-                    }
-                }
-                loop();
-            } else {
-                const axisVec = new THREE.Vector3(axis==='x'?1:0, axis==='y'?1:0, axis==='z'?1:0);
-                pivot.setRotationFromAxisAngle(axisVec, angleRad);
-                finishRotation(pivot, activeCubes);
-            }
-        }
-
-        function finishRotation(pivot, activeCubes) {
-            pivot.updateMatrixWorld();
-            activeCubes.forEach(c => {
-                scene.attach(c);
-                c.position.x = Math.round(c.position.x / totalSize) * totalSize;
-                c.position.y = Math.round(c.position.y / totalSize) * totalSize;
-                c.position.z = Math.round(c.position.z / totalSize) * totalSize;
-                
-                const e = new THREE.Euler().setFromQuaternion(c.quaternion);
-                e.x = Math.round(e.x / (Math.PI/2)) * (Math.PI/2);
-                e.y = Math.round(e.y / (Math.PI/2)) * (Math.PI/2);
-                e.z = Math.round(e.z / (Math.PI/2)) * (Math.PI/2);
-                c.quaternion.setFromEuler(e);
-                c.updateMatrixWorld();
-            });
-            scene.remove(pivot);
-            isAnimating = false;
-        }
-
-        async function scrambleCube(moves) {
-            if (isAnimating) return;
-            
-            // STOP AUTO-ROTATE on Scramble
-            controls.autoRotate = false;
-            
-            resetTimer();
-            const axes = ['x','y','z'];
-            const indices = [-1,0,1];
-            const dirs = [90,-90];
-            
-            const btns = document.querySelectorAll('button');
-            btns.forEach(b => b.disabled = true);
-
-            for(let i=0; i<moves; i++) {
-                const ax = axes[Math.floor(Math.random()*3)];
-                const idx = indices[Math.floor(Math.random()*3)];
-                const dir = dirs[Math.floor(Math.random()*2)];
-                
-                rotateLayer(ax, idx, dir, true, 100);
-                await new Promise(r => setTimeout(r, 110));
-            }
-            
-            moveCount = 0;
-            btns.forEach(b => b.disabled = false);
-        }
-
-        function resetCube() {
-            // STOP AUTO-ROTATE on Reset
-            controls.autoRotate = false;
-            
-            createRubiksCube();
-            resetTimer();
-            moveCount = 0;
-        }
-
-        function startTimer() {
-            if (isTimerRunning) return;
-            isTimerRunning = true;
-            startTime = Date.now();
-            timerInterval = setInterval(() => {
-                const delta = Date.now() - startTime;
-                const m = Math.floor(delta/60000).toString().padStart(2,'0');
-                const s = Math.floor((delta%60000)/1000).toString().padStart(2,'0');
-                const ms = Math.floor((delta%1000)/10).toString().padStart(2,'0');
-                document.getElementById('timer').innerText = `${m}:${s}.${ms}`;
-            }, 30);
-        }
-
-        function stopTimer() {
-            isTimerRunning = false;
-            clearInterval(timerInterval);
-        }
-
-        function resetTimer() {
-            stopTimer();
-            document.getElementById('timer').innerText = "00:00.00";
-        }
-
-        function checkSolved() {
-            if (moveCount < 1) return;
-            let solved = true;
-            for(let c of cubes) {
-                const p = c.position.clone().divideScalar(totalSize).round();
-                const t = c.userData.initialPosition;
-                if (!p.equals(t)) { solved = false; break; }
-                const fwd = new THREE.Vector3(0,0,1).applyQuaternion(c.quaternion);
-                const up = new THREE.Vector3(0,1,0).applyQuaternion(c.quaternion);
-                if (Math.abs(fwd.z - 1) > 0.1 || Math.abs(up.y - 1) > 0.1) { solved = false; break; }
-            }
-            if (solved) {
-                stopTimer();
-                document.getElementById('final-time').innerText = document.getElementById('timer').innerText;
-                document.getElementById('victory-modal').classList.add('active');
-                
-                // ENABLE AUTO-ROTATE ONLY ON VICTORY
-                controls.autoRotate = true;
-                controls.autoRotateSpeed = 5;
-            }
-        }
-
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            adjustCameraPosition();
-        }
-
-        function animate() {
-            requestAnimationFrame(animate);
-            controls.update();
-            renderer.render(scene, camera);
-        }
-    </script>
-</body>
-</html>
+            rimLight2.lookAt(0,0,
