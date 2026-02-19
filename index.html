@@ -542,4 +542,439 @@
 
             const rimLight2 = new THREE.SpotLight(colors.R, 8);
             rimLight2.position.set(10, -5, 5);
-            rimLight2.lookAt(0,0,
+            rimLight2.lookAt(0,0,0);
+            scene.add(rimLight2);
+            
+            createStars();
+
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.enablePan = false;
+            controls.minDistance = 4;
+            controls.maxDistance = 20;
+            controls.autoRotate = false;
+
+            createRubiksCube(); // Start creation
+
+            window.addEventListener('resize', onWindowResize);
+            
+            const canvas = renderer.domElement;
+            const startInteraction = (e) => {
+                soundEngine.init();
+                if (e.type === 'touchstart') handleInputStart(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+                else handleInputStart(e.clientX, e.clientY);
+            };
+
+            canvas.addEventListener('mousedown', startInteraction);
+            window.addEventListener('mousemove', onMouseMove);
+            window.addEventListener('mouseup', onMouseUp);
+            canvas.addEventListener('touchstart', startInteraction, {passive: false});
+            window.addEventListener('touchmove', onTouchMove, {passive: false});
+            window.addEventListener('touchend', onTouchEnd);
+
+            // UI Listeners
+            document.getElementById('btn-scramble').addEventListener('click', () => { soundEngine.init(); scrambleCube(20); });
+            document.getElementById('btn-reset').addEventListener('click', () => { soundEngine.init(); resetCube(); });
+            document.getElementById('btn-play-again').addEventListener('click', () => {
+                document.getElementById('victory-modal').classList.remove('active');
+                scrambleCube(20);
+            });
+            
+            // Settings Toggle
+            document.getElementById('settings-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                document.getElementById('settings-menu').classList.toggle('active');
+            });
+            
+            // Close menu when clicking outside
+            document.addEventListener('click', (e) => {
+                const menu = document.getElementById('settings-menu');
+                const btn = document.getElementById('settings-btn');
+                if(!menu.contains(e.target) && !btn.contains(e.target)) {
+                    menu.classList.remove('active');
+                }
+            });
+
+            setTimeout(() => {
+                document.getElementById('loading').style.opacity = 0;
+                setTimeout(() => document.getElementById('loading').style.display = 'none', 500);
+            }, 800);
+        }
+
+        // --- GRAPHICS MANAGER ---
+        function applyGraphicsSettings() {
+            // Dispose old geometry/material to free memory
+            const oldPositions = cubes.map(c => ({
+                pos: c.position.clone(),
+                quat: c.quaternion.clone(),
+                userData: c.userData
+            }));
+            
+            // Clear current meshes and DISPOSE resources to avoid z-fighting/memory leaks
+            cubes.forEach(c => {
+                scene.remove(c);
+                if (c.geometry) c.geometry.dispose();
+                if (Array.isArray(c.material)) c.material.forEach(m => m.dispose());
+                else if (c.material) c.material.dispose();
+            });
+            cubes = [];
+
+            // 1. Settings per Level
+            let geom;
+            let matType; // 0: Physical(High), 1: Standard(Med), 2: Lambert(Low)
+            
+            if (currentQuality === 'high') {
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                renderer.shadowMap.enabled = true;
+                renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                mainLight.castShadow = true;
+                geom = new RoundedBoxGeometry(cubeSize, cubeSize, cubeSize, 4, 0.1);
+                matType = 0;
+            } 
+            else if (currentQuality === 'medium') {
+                renderer.setPixelRatio(1.5); // Fixed decent ratio
+                renderer.shadowMap.enabled = true;
+                renderer.shadowMap.type = THREE.BasicShadowMap; // Cheaper shadows
+                mainLight.castShadow = true;
+                geom = new RoundedBoxGeometry(cubeSize, cubeSize, cubeSize, 2, 0.1); // Less segments
+                matType = 1;
+            } 
+            else { // Low
+                renderer.setPixelRatio(1); // Standard ratio
+                renderer.shadowMap.enabled = false;
+                mainLight.castShadow = false;
+                geom = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize); // Basic box
+                matType = 2;
+            }
+
+            // Rebuild Meshes
+            oldPositions.forEach((data) => {
+                const materials = [];
+                const x = data.userData.initialPosition.x;
+                const y = data.userData.initialPosition.y;
+                const z = data.userData.initialPosition.z;
+
+                materials.push(getMaterial(x === 1 ? colors.R : colors.base, matType));
+                materials.push(getMaterial(x === -1 ? colors.L : colors.base, matType));
+                materials.push(getMaterial(y === 1 ? colors.U : colors.base, matType));
+                materials.push(getMaterial(y === -1 ? colors.D : colors.base, matType));
+                materials.push(getMaterial(z === 1 ? colors.F : colors.base, matType));
+                materials.push(getMaterial(z === -1 ? colors.B : colors.base, matType));
+
+                const mesh = new THREE.Mesh(geom, materials);
+                mesh.position.copy(data.pos);
+                mesh.quaternion.copy(data.quat);
+                mesh.userData = data.userData;
+                
+                if(currentQuality !== 'low') {
+                    mesh.castShadow = true;
+                    mesh.receiveShadow = true;
+                    
+                    // Add core for depth effect only on med/high
+                    const coreGeo = new THREE.BoxGeometry(cubeSize * 0.65, cubeSize * 0.65, cubeSize * 0.65);
+                    const coreMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+                    const core = new THREE.Mesh(coreGeo, coreMat);
+                    mesh.add(core);
+                }
+
+                scene.add(mesh);
+                cubes.push(mesh);
+            });
+        }
+
+        function getMaterial(colorHex, type) {
+            const isBase = colorHex === colors.base;
+            
+            if (type === 0) { // HIGH: Physical Glass
+                return new THREE.MeshPhysicalMaterial({
+                    color: isBase ? 0x111111 : colorHex, 
+                    emissive: isBase ? 0x000000 : colorHex,
+                    emissiveIntensity: isBase ? 0 : 0.4,
+                    transmission: isBase ? 0.99 : 0.5,
+                    opacity: 1,
+                    metalness: 0.05,
+                    roughness: 0.04,
+                    ior: 1.6,
+                    thickness: 0.8,
+                    clearcoat: 1.0,
+                    side: THREE.DoubleSide
+                });
+            } else if (type === 1) { // MEDIUM: Standard (Fake Glass)
+                return new THREE.MeshStandardMaterial({
+                    color: isBase ? 0x222222 : colorHex,
+                    roughness: 0.2,
+                    metalness: 0.6,
+                    emissive: isBase ? 0x000000 : colorHex,
+emissiveIntensity: isBase ? 0 : 0.2
+                });
+            } else { // LOW: Lambert (Plastic)
+                return new THREE.MeshLambertMaterial({
+                    color: colorHex
+                });
+            }
+        }
+
+        // --- Standard Create Cube (First Run & Reset) ---
+        function createRubiksCube() {
+            // FIX: Clean up existing meshes from scene to prevent duplicates/z-fighting
+            if (cubes.length > 0) {
+                cubes.forEach(c => {
+                    scene.remove(c);
+                    if (c.geometry) c.geometry.dispose();
+                    if (Array.isArray(c.material)) c.material.forEach(m => m.dispose());
+                    else if (c.material) c.material.dispose();
+                });
+            }
+            cubes = []; 
+            
+            // Create dummy data to simulate initial state, then build
+            const initialData = [];
+            for (let x = -1; x <= 1; x++) {
+                for (let y = -1; y <= 1; y++) {
+                    for (let z = -1; z <= 1; z++) {
+                        initialData.push({
+                            pos: new THREE.Vector3(x * totalSize, y * totalSize, z * totalSize),
+                            quat: new THREE.Quaternion(),
+                            userData: { initialPosition: new THREE.Vector3(x, y, z), isCube: true }
+                        });
+                    }
+                }
+            }
+            
+            // Temp fill cubes array so applyGraphicsSettings has something to work with
+            cubes = initialData.map(d => {
+                const m = new THREE.Object3D();
+                m.position.copy(d.pos);
+                m.userData = d.userData;
+                return m;
+            });
+
+            applyGraphicsSettings();
+        }
+
+        function adjustCameraPosition() {
+            const aspect = window.innerWidth / window.innerHeight;
+            if (aspect < 1) camera.position.set(7, 7, 7);
+            else camera.position.set(5.5, 4.5, 5.5);
+        }
+
+        function createStars() {
+            const particlesGeo = new THREE.BufferGeometry();
+            const count = 500;
+            const posArray = new Float32Array(count * 3);
+            for(let i = 0; i < count * 3; i++) posArray[i] = (Math.random() - 0.5) * 40;
+            particlesGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+            const particlesMat = new THREE.PointsMaterial({ size: 0.05, color: 0xffffff, transparent: true, opacity: 0.4 });
+            const starField = new THREE.Points(particlesGeo, particlesMat);
+            scene.add(starField);
+        }
+
+        // --- Logic Input ---
+        function getIntersects(cx, cy) {
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((cx - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((cy - rect.top) / rect.height) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+            return raycaster.intersectObjects(cubes);
+        }
+
+        function handleInputStart(cx, cy) {
+            if (isAnimating) return;
+            const intersects = getIntersects(cx, cy);
+            if (intersects.length > 0) {
+                controls.enabled = false;
+                intersectedObject = intersects[0].object;
+                intersectedNormal = intersects[0].face.normal.clone();
+                intersectedNormal.transformDirection(intersectedObject.matrixWorld).round();
+                startMouse.set(cx, cy);
+                isDragging = true;
+            } else {
+                controls.enabled = true;
+            }
+        }
+
+        function onMouseMove(e) { handleInputMove(e.clientX, e.clientY); }
+        function onTouchMove(e) { e.preventDefault(); handleInputMove(e.changedTouches[0].clientX, e.changedTouches[0].clientY); }
+
+        function handleInputMove(cx, cy) {
+            if (!isDragging || isAnimating || !intersectedObject) return;
+            const deltaX = cx - startMouse.x;
+            const deltaY = cy - startMouse.y;
+            if (Math.abs(deltaX) < 15 && Math.abs(deltaY) < 15) return;
+
+            const nx = Math.abs(intersectedNormal.x);
+            const ny = Math.abs(intersectedNormal.y);
+            let rotateAxis, rotateDir;
+            
+            if (ny > 0.5) {
+                if (Math.abs(deltaX) > Math.abs(deltaY)) { rotateAxis = 'z'; rotateDir = deltaX > 0 ? -1 : 1; }
+                else { rotateAxis = 'x'; rotateDir = deltaY > 0 ? -1 : 1; }
+            } else if (nx > 0.5) {
+                if (Math.abs(deltaY) > Math.abs(deltaX)) { rotateAxis = 'z'; rotateDir = deltaY > 0 ? -1 : 1; }
+                else { rotateAxis = 'y'; rotateDir = deltaX > 0 ? 1 : -1; }
+            } else {
+                if (Math.abs(deltaX) > Math.abs(deltaY)) { rotateAxis = 'y'; rotateDir = deltaX > 0 ? 1 : -1; }
+                else { rotateAxis = 'x'; rotateDir = deltaY > 0 ? 1 : -1; }
+            }
+const pos = intersectedObject.position.clone();
+            pos.x = Math.round(pos.x / totalSize);
+            pos.y = Math.round(pos.y / totalSize);
+            pos.z = Math.round(pos.z / totalSize);
+
+            let layerIndex;
+            if (rotateAxis === 'x') layerIndex = pos.x;
+            if (rotateAxis === 'y') layerIndex = pos.y;
+            if (rotateAxis === 'z') layerIndex = pos.z;
+
+            rotateLayer(rotateAxis, layerIndex, rotateDir * 90, true);
+            isDragging = false;
+        }
+
+        function onMouseUp() { isDragging = false; controls.enabled = true; }
+        function onTouchEnd() { isDragging = false; controls.enabled = true; }
+
+        function rotateLayer(axis, index, angleDeg, animate = true, duration = 300) {
+            if (isAnimating && animate) return;
+            if (animate && !isTimerRunning && moveCount === 0) startTimer();
+            if (animate) moveCount++;
+            if (animate) soundEngine.playMove();
+
+            const angleRad = THREE.MathUtils.degToRad(angleDeg);
+            const activeCubes = [];
+            
+            cubes.forEach(cube => {
+                let localPos = cube.position.clone().divideScalar(totalSize);
+                let val = axis === 'x' ? localPos.x : (axis === 'y' ? localPos.y : localPos.z);
+                if (Math.abs(val - index) < 0.1) activeCubes.push(cube);
+            });
+
+            const pivot = new THREE.Object3D();
+            pivot.rotation.set(0,0,0);
+            scene.add(pivot);
+            activeCubes.forEach(c => pivot.attach(c));
+
+            if (animate) {
+                isAnimating = true;
+                const axisVec = new THREE.Vector3(axis==='x'?1:0, axis==='y'?1:0, axis==='z'?1:0);
+                const startT = Date.now();
+                function loop() {
+                    const elapsed = Date.now() - startT;
+                    const progress = Math.min(elapsed / duration, 1);
+                    const ease = 1 - Math.pow(1 - progress, 4);
+                    pivot.setRotationFromAxisAngle(axisVec, angleRad * ease);
+                    if (progress < 1) requestAnimationFrame(loop);
+                    else { finishRotation(pivot, activeCubes); checkSolved(); }
+                }
+                loop();
+            } else {
+                const axisVec = new THREE.Vector3(axis==='x'?1:0, axis==='y'?1:0, axis==='z'?1:0);
+                pivot.setRotationFromAxisAngle(axisVec, angleRad);
+                finishRotation(pivot, activeCubes);
+            }
+        }
+
+        function finishRotation(pivot, activeCubes) {
+            pivot.updateMatrixWorld();
+            activeCubes.forEach(c => {
+                scene.attach(c);
+                c.position.x = Math.round(c.position.x / totalSize) * totalSize;
+                c.position.y = Math.round(c.position.y / totalSize) * totalSize;
+                c.position.z = Math.round(c.position.z / totalSize) * totalSize;
+                const e = new THREE.Euler().setFromQuaternion(c.quaternion);
+                e.x = Math.round(e.x / (Math.PI/2)) * (Math.PI/2);
+                e.y = Math.round(e.y / (Math.PI/2)) * (Math.PI/2);
+                e.z = Math.round(e.z / (Math.PI/2)) * (Math.PI/2);
+                c.quaternion.setFromEuler(e);
+                c.updateMatrixWorld();
+            });
+            scene.remove(pivot);
+            isAnimating = false;
+        }
+
+        async function scrambleCube(moves) {
+            if (isAnimating) return;
+            controls.autoRotate = false;
+            resetTimer();
+            const axes = ['x','y','z'];
+            const indices = [-1,0,1];
+            const dirs = [90,-90];
+            const btns = document.querySelectorAll('button.action-btn');
+            btns.forEach(b => b.disabled = true);
+
+            for(let i=0; i<moves; i++) {
+                const ax = axes[Math.floor(Math.random()*3)];
+                const idx = indices[Math.floor(Math.random()*3)];
+                const dir = dirs[Math.floor(Math.random()*2)];
+                rotateLayer(ax, idx, dir, true, 100);
+                await new Promise(r => setTimeout(r, 110));
+            }
+            moveCount = 0;
+            btns.forEach(b => b.disabled = false);
+        }
+
+        function resetCube() {
+            controls.autoRotate = false;
+            createRubiksCube();
+            resetTimer();
+            moveCount = 0;
+        }
+
+        function startTimer() {
+            if (isTimerRunning) return;
+            isTimerRunning = true;
+            startTime = Date.now();
+            timerInterval = setInterval(() => {
+                const delta = Date.now() - startTime;
+                const m = Math.floor(delta/60000).toString().padStart(2,'0');
+                const s = Math.floor((delta%60000)/1000).toString().padStart(2,'0');
+                const ms = Math.floor((delta%1000)/10).toString().padStart(2,'0');
+                document.getElementById('timer').innerText = `${m}:${s}.${ms}`;
+            }, 30);
+        }
+
+        function stopTimer() {
+            isTimerRunning = false;
+            clearInterval(timerInterval);
+        }
+
+        function resetTimer() {
+            stopTimer();
+            document.getElementById('timer').innerText = "00:00.00";
+        }
+
+        function checkSolved() {
+            if (moveCount < 1) return;
+            let solved = true;
+            for(let c of cubes) {
+                const p = c.position.clone().divideScalar(totalSize).round();
+                const t = c.userData.initialPosition;
+                if (!p.equals(t)) { solved = false; break; }
+                const fwd = new THREE.Vector3(0,0,1).applyQuaternion(c.quaternion);
+                const up = new THREE.Vector3(0,1,0).applyQuaternion(c.quaternion);
+                if (Math.abs(fwd.z - 1) > 0.1 || Math.abs(up.y - 1) > 0.1) { solved = false; break; }
+            }
+            if (solved) {
+                stopTimer();
+                document.getElementById('final-time').innerText = document.getElementById('timer').innerText;
+                document.getElementById('victory-modal').classList.add('active');
+                controls.autoRotate = true;
+                controls.autoRotateSpeed = 5;
+            }
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            adjustCameraPosition();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>
