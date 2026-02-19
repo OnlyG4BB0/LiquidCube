@@ -12,6 +12,7 @@
             --neon-accent: #00f3ff;
             --text-color: #ffffff;
             --font-main: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --ai-accent: #a855f7;
         }
 
         body {
@@ -188,7 +189,7 @@
             align-items: center;
             gap: 15px;
             width: 100%;
-            max-width: 400px;
+            max-width: 500px;
             align-self: center;
             background: var(--glass-bg);
             backdrop-filter: blur(12px);
@@ -200,19 +201,18 @@
             box-shadow: 0 10px 40px rgba(0,0,0,0.5);
         }
 
-        .button-row {
-            display: flex;
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
             gap: 10px;
             width: 100%;
-            justify-content: center;
-            flex-wrap: wrap;
         }
 
         button.action-btn {
             background: rgba(255, 255, 255, 0.03);
             border: 1px solid rgba(255,255,255,0.1);
             color: #fff;
-            padding: 12px 20px;
+            padding: 12px 10px;
             border-radius: 10px;
             font-size: 0.9rem;
             font-family: var(--font-main);
@@ -221,8 +221,8 @@
             text-transform: uppercase;
             letter-spacing: 1px;
             transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-            flex: 1 1 auto;
-            min-width: 100px;
+            width: 100%;
+            box-sizing: border-box;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -242,11 +242,56 @@
         }
 
         button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
+            opacity: 0.5 !important;
+            cursor: not-allowed !important;
+            transform: none !important;
+            box-shadow: none !important;
         }
+
+        /* --- AI FEATURES STYLES --- */
+        button.ai-btn {
+            border-color: rgba(168, 85, 247, 0.5);
+            background: rgba(168, 85, 247, 0.1);
+            color: #e9d5ff;
+        }
+
+        button.ai-btn:hover {
+            border-color: var(--ai-accent);
+            background: rgba(168, 85, 247, 0.3);
+            color: #fff;
+            box-shadow: 0 0 20px rgba(168, 85, 247, 0.4);
+        }
+
+        /* --- AI BUBBLE --- */
+        #ai-message {
+            position: absolute;
+            top: 15%;
+            left: 50%;
+            transform: translateX(-50%) scale(0.9);
+            background: rgba(15, 15, 25, 0.95);
+            border: 1px solid var(--ai-accent);
+            color: #fff;
+            padding: 20px 30px;
+            border-radius: 16px;
+            max-width: 90%;
+            width: 400px;
+            text-align: center;
+            z-index: 10;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 0 1px rgba(168, 85, 247, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        #ai-message.active {
+            opacity: 1;
+            transform: translateX(-50%) scale(1);
+            pointer-events: auto;
+        }
+
+        #ai-label { font-size: 0.8rem; text-transform: uppercase; color: var(--ai-accent); margin-bottom: 5px; font-weight:bold; }
+        #ai-text { font-size: 1rem; line-height: 1.5; }
 
         /* --- INSTRUCTIONS --- */
         .instructions-panel {
@@ -348,12 +393,18 @@
 
     <div id="canvas-container"></div>
 
+    <!-- AI Message Bubble -->
+    <div id="ai-message">
+        <div id="ai-label">✨ Gemini AI</div>
+        <span id="ai-text">Analisi in corso...</span>
+    </div>
+
     <div id="ui-container">
         <div class="hud-top">
             <div style="display:flex; flex-direction:column;">
                 <div class="title-block">
                     <h1>Liquid Cube</h1>
-                    <div class="subtitle">ASMR EDITION</div>
+                    <div class="subtitle">ASMR + AI EDITION</div>
                 </div>
                 <div id="timer-container">
                     <div id="timer">00:00.00</div>
@@ -383,9 +434,11 @@
         </div>
 
         <div class="hud-bottom">
-            <div class="button-row">
+            <div class="button-grid">
                 <button id="btn-scramble" class="action-btn">🎲 Mescola</button>
                 <button id="btn-reset" class="action-btn">↺ Reset</button>
+                <button id="btn-ai-scramble" class="action-btn ai-btn">✨ AI Scramble</button>
+                <button id="btn-ai-hint" class="action-btn ai-btn">💡 AI Coach (5)</button>
             </div>
         </div>
     </div>
@@ -418,7 +471,6 @@
                     const AudioContext = window.AudioContext || window.webkitAudioContext;
                     this.ctx = new AudioContext();
                     this.isInit = true;
-                    // Silent buffer unlock for mobile
                     const buffer = this.ctx.createBuffer(1, 1, 22050);
                     const source = this.ctx.createBufferSource();
                     source.buffer = buffer;
@@ -432,7 +484,6 @@
                 if (this.ctx.state === 'suspended') this.ctx.resume();
                 const t = this.ctx.currentTime;
                 
-                // Noise (Friction)
                 const bufSize = this.ctx.sampleRate * 0.15;
                 const buf = this.ctx.createBuffer(1, bufSize, this.ctx.sampleRate);
                 const data = buf.getChannelData(0);
@@ -443,7 +494,6 @@
                 const nGain = this.ctx.createGain(); nGain.gain.setValueAtTime(0.3,t); nGain.gain.exponentialRampToValueAtTime(0.01,t+0.1);
                 nSrc.connect(nFilt); nFilt.connect(nGain); nGain.connect(this.ctx.destination); nSrc.start(t);
 
-                // Click
                 const cOsc = this.ctx.createOscillator(); cOsc.type='triangle';
                 cOsc.frequency.setValueAtTime(150, t+0.05); cOsc.frequency.exponentialRampToValueAtTime(40, t+0.1);
                 const cGain = this.ctx.createGain(); cGain.gain.setValueAtTime(0, t+0.05); cGain.gain.linearRampToValueAtTime(0.5, t+0.06); cGain.gain.exponentialRampToValueAtTime(0.01, t+0.15);
@@ -452,12 +502,14 @@
         }
         const soundEngine = new SoundEngine();
 
-        // --- Variabili Globali ---
+        // --- Variabili Globali & Config ---
+        const apiKey = "AIzaSyAXW0vPdCfftFj4eLzet94LSGHHVKNXld8"; // API Key per Gemini
+        
         let scene, camera, renderer, controls;
         let cubes = [];
         let isAnimating = false;
-        let currentQuality = 'high'; // high, medium, low
-        let mainLight; // Riferimento alla luce per toggle ombre
+        let currentQuality = 'high';
+        let mainLight, fillLight;
         
         // Logica di gioco
         const cubeSize = 1;
@@ -476,25 +528,33 @@
         let isTimerRunning = false;
         let moveCount = 0;
 
+        // Gestione AI Hints - Logica Perfetta di Soluzione
+        let hintsLeft = 5;
+        let solutionStack = []; // Tiene traccia della sequenza per tornare allo stato risolto
+
         let colors = {
             base: 0x0a0a0a, R: 0xff0040, L: 0xff6600, U: 0xffffff, 
             D: 0xffcc00, F: 0x00ff66, B: 0x0066ff
         };
 
-        // Espongo funzione globale per il menu HTML
+        // UI Functions
         window.updateQuality = function(level) {
             currentQuality = level;
-            
-            // Update UI
             document.querySelectorAll('.quality-btn').forEach(b => b.classList.remove('selected'));
             event.target.classList.add('selected');
-            
-            // Close menu
             document.getElementById('settings-menu').classList.remove('active');
-            
-            // Re-apply visual settings without losing state
             applyGraphicsSettings();
         };
+
+        function updateHintsUI() {
+            const btn = document.getElementById('btn-ai-hint');
+            btn.innerHTML = `💡 AI Coach (${hintsLeft})`;
+            if (hintsLeft <= 0) {
+                btn.disabled = true;
+            } else {
+                btn.disabled = false;
+            }
+        }
 
         init();
         animate();
@@ -509,7 +569,6 @@
             adjustCameraPosition(); 
             camera.lookAt(0, 0, 0);
 
-            // Renderer setup (start high)
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
@@ -519,7 +578,6 @@
             renderer.toneMappingExposure = 1.0; 
             container.appendChild(renderer.domElement);
 
-            // Env
             const pmremGenerator = new THREE.PMREMGenerator(renderer);
             pmremGenerator.compileEquirectangularShader();
             scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
@@ -534,7 +592,10 @@
             mainLight.shadow.mapSize.height = 2048;
             scene.add(mainLight);
 
-            // Rim lights (cosmetic)
+            fillLight = new THREE.DirectionalLight(0xffffff, 1.5);
+            fillLight.position.set(-5, -10, -7);
+            scene.add(fillLight);
+
             const rimLight1 = new THREE.SpotLight(colors.B, 10);
             rimLight1.position.set(-10, 0, -5);
             rimLight1.lookAt(0,0,0);
@@ -555,7 +616,8 @@
             controls.maxDistance = 20;
             controls.autoRotate = false;
 
-            createRubiksCube(); // Start creation
+            createRubiksCube(); 
+            updateHintsUI(); // Initializza UI suggerimenti
 
             window.addEventListener('resize', onWindowResize);
             
@@ -573,7 +635,6 @@
             window.addEventListener('touchmove', onTouchMove, {passive: false});
             window.addEventListener('touchend', onTouchEnd);
 
-            // UI Listeners
             document.getElementById('btn-scramble').addEventListener('click', () => { soundEngine.init(); scrambleCube(20); });
             document.getElementById('btn-reset').addEventListener('click', () => { soundEngine.init(); resetCube(); });
             document.getElementById('btn-play-again').addEventListener('click', () => {
@@ -581,13 +642,14 @@
                 scrambleCube(20);
             });
             
-            // Settings Toggle
+            document.getElementById('btn-ai-scramble').addEventListener('click', () => { soundEngine.init(); generateAIScramble(); });
+            document.getElementById('btn-ai-hint').addEventListener('click', () => { soundEngine.init(); getAITip(); });
+
             document.getElementById('settings-btn').addEventListener('click', (e) => {
                 e.stopPropagation();
                 document.getElementById('settings-menu').classList.toggle('active');
             });
             
-            // Close menu when clicking outside
             document.addEventListener('click', (e) => {
                 const menu = document.getElementById('settings-menu');
                 const btn = document.getElementById('settings-btn');
@@ -604,14 +666,12 @@
 
         // --- GRAPHICS MANAGER ---
         function applyGraphicsSettings() {
-            // Dispose old geometry/material to free memory
             const oldPositions = cubes.map(c => ({
                 pos: c.position.clone(),
                 quat: c.quaternion.clone(),
                 userData: c.userData
             }));
             
-            // Clear current meshes and DISPOSE resources to avoid z-fighting/memory leaks
             cubes.forEach(c => {
                 scene.remove(c);
                 if (c.geometry) c.geometry.dispose();
@@ -620,9 +680,8 @@
             });
             cubes = [];
 
-            // 1. Settings per Level
             let geom;
-            let matType; // 0: Physical(High), 1: Standard(Med), 2: Lambert(Low)
+            let matType; 
             
             if (currentQuality === 'high') {
                 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -633,22 +692,21 @@
                 matType = 0;
             } 
             else if (currentQuality === 'medium') {
-                renderer.setPixelRatio(1.5); // Fixed decent ratio
+                renderer.setPixelRatio(1.5); 
                 renderer.shadowMap.enabled = true;
-                renderer.shadowMap.type = THREE.BasicShadowMap; // Cheaper shadows
+                renderer.shadowMap.type = THREE.BasicShadowMap; 
                 mainLight.castShadow = true;
-                geom = new RoundedBoxGeometry(cubeSize, cubeSize, cubeSize, 2, 0.1); // Less segments
+                geom = new RoundedBoxGeometry(cubeSize, cubeSize, cubeSize, 2, 0.1); 
                 matType = 1;
             } 
-            else { // Low
-                renderer.setPixelRatio(1); // Standard ratio
+            else { 
+                renderer.setPixelRatio(1); 
                 renderer.shadowMap.enabled = false;
                 mainLight.castShadow = false;
-                geom = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize); // Basic box
+                geom = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize); 
                 matType = 2;
             }
 
-            // Rebuild Meshes
             oldPositions.forEach((data) => {
                 const materials = [];
                 const x = data.userData.initialPosition.x;
@@ -670,8 +728,6 @@
                 if(currentQuality !== 'low') {
                     mesh.castShadow = true;
                     mesh.receiveShadow = true;
-                    
-                    // Add core for depth effect only on med/high
                     const coreGeo = new THREE.BoxGeometry(cubeSize * 0.65, cubeSize * 0.65, cubeSize * 0.65);
                     const coreMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
                     const core = new THREE.Mesh(coreGeo, coreMat);
@@ -686,7 +742,7 @@
         function getMaterial(colorHex, type) {
             const isBase = colorHex === colors.base;
             
-            if (type === 0) { // HIGH: Physical Glass
+            if (type === 0) {
                 return new THREE.MeshPhysicalMaterial({
                     color: isBase ? 0x111111 : colorHex, 
                     emissive: isBase ? 0x000000 : colorHex,
@@ -700,24 +756,22 @@
                     clearcoat: 1.0,
                     side: THREE.DoubleSide
                 });
-            } else if (type === 1) { // MEDIUM: Standard (Fake Glass)
+            } else if (type === 1) { 
                 return new THREE.MeshStandardMaterial({
                     color: isBase ? 0x222222 : colorHex,
                     roughness: 0.2,
                     metalness: 0.6,
                     emissive: isBase ? 0x000000 : colorHex,
-emissiveIntensity: isBase ? 0 : 0.2
+                    emissiveIntensity: isBase ? 0 : 0.2
                 });
-            } else { // LOW: Lambert (Plastic)
+            } else { 
                 return new THREE.MeshLambertMaterial({
                     color: colorHex
                 });
             }
         }
 
-        // --- Standard Create Cube (First Run & Reset) ---
         function createRubiksCube() {
-            // FIX: Clean up existing meshes from scene to prevent duplicates/z-fighting
             if (cubes.length > 0) {
                 cubes.forEach(c => {
                     scene.remove(c);
@@ -727,8 +781,8 @@ emissiveIntensity: isBase ? 0 : 0.2
                 });
             }
             cubes = []; 
+            solutionStack = []; // Clear stack for new clean cube
             
-            // Create dummy data to simulate initial state, then build
             const initialData = [];
             for (let x = -1; x <= 1; x++) {
                 for (let y = -1; y <= 1; y++) {
@@ -742,7 +796,6 @@ emissiveIntensity: isBase ? 0 : 0.2
                 }
             }
             
-            // Temp fill cubes array so applyGraphicsSettings has something to work with
             cubes = initialData.map(d => {
                 const m = new THREE.Object3D();
                 m.position.copy(d.pos);
@@ -817,7 +870,8 @@ emissiveIntensity: isBase ? 0 : 0.2
                 if (Math.abs(deltaX) > Math.abs(deltaY)) { rotateAxis = 'y'; rotateDir = deltaX > 0 ? 1 : -1; }
                 else { rotateAxis = 'x'; rotateDir = deltaY > 0 ? 1 : -1; }
             }
-const pos = intersectedObject.position.clone();
+            
+            const pos = intersectedObject.position.clone();
             pos.x = Math.round(pos.x / totalSize);
             pos.y = Math.round(pos.y / totalSize);
             pos.z = Math.round(pos.z / totalSize);
@@ -834,8 +888,55 @@ const pos = intersectedObject.position.clone();
         function onMouseUp() { isDragging = false; controls.enabled = true; }
         function onTouchEnd() { isDragging = false; controls.enabled = true; }
 
+        // Mappatura Mossa e Inverso per il tracciamento
+        function getMoveNotation(axis, index, angleDeg) {
+            let base = '';
+            let isClockwise = false;
+            
+            if (axis === 'x') {
+                if (index === 1) { base = 'R'; isClockwise = (angleDeg === -90); }
+                else if (index === -1) { base = 'L'; isClockwise = (angleDeg === 90); }
+                else if (index === 0) { base = 'M'; isClockwise = (angleDeg === 90); }
+            } else if (axis === 'y') {
+                if (index === 1) { base = 'U'; isClockwise = (angleDeg === -90); }
+                else if (index === -1) { base = 'D'; isClockwise = (angleDeg === 90); }
+                else if (index === 0) { base = 'E'; isClockwise = (angleDeg === 90); }
+            } else if (axis === 'z') {
+                if (index === 1) { base = 'F'; isClockwise = (angleDeg === -90); }
+                else if (index === -1) { base = 'B'; isClockwise = (angleDeg === 90); }
+                else if (index === 0) { base = 'S'; isClockwise = (angleDeg === -90); }
+            }
+
+            if (!base) return null;
+            if (Math.abs(angleDeg) === 180) return base + '2';
+            return isClockwise ? base : base + "'";
+        }
+
+        function getInverseNotation(notation) {
+            if (!notation) return null;
+            if (notation.includes('2')) return notation; 
+            if (notation.includes("'")) return notation[0];
+            return notation + "'";
+        }
+
         function rotateLayer(axis, index, angleDeg, animate = true, duration = 300) {
             if (isAnimating && animate) return;
+            
+            // Tracciamento AI per soluzione
+            if (Math.abs(angleDeg) === 90 || Math.abs(angleDeg) === 180) {
+                const moveNotation = getMoveNotation(axis, index, angleDeg);
+                if (moveNotation) {
+                    const inverse = getInverseNotation(moveNotation);
+                    // Se la mossa che sto facendo cancella l'ultimo requisito, lo rimuovo
+                    if (solutionStack.length > 0 && solutionStack[solutionStack.length - 1] === moveNotation) {
+                        solutionStack.pop();
+                    } else {
+                        // Altrimenti, aggiungo l'inverso per risolverla
+                        solutionStack.push(inverse);
+                    }
+                }
+            }
+
             if (animate && !isTimerRunning && moveCount === 0) startTimer();
             if (animate) moveCount++;
             if (animate) soundEngine.playMove();
@@ -896,6 +997,12 @@ const pos = intersectedObject.position.clone();
             if (isAnimating) return;
             controls.autoRotate = false;
             resetTimer();
+            
+            // Re-inizializza stack aiuti e contatori
+            solutionStack = [];
+            hintsLeft = 5;
+            updateHintsUI();
+
             const axes = ['x','y','z'];
             const indices = [-1,0,1];
             const dirs = [90,-90];
@@ -911,13 +1018,16 @@ const pos = intersectedObject.position.clone();
             }
             moveCount = 0;
             btns.forEach(b => b.disabled = false);
+            updateHintsUI(); // Ensure it reflects correctly
         }
 
         function resetCube() {
             controls.autoRotate = false;
-            createRubiksCube();
+            createRubiksCube(); 
             resetTimer();
             moveCount = 0;
+            hintsLeft = 5;
+            updateHintsUI();
         }
 
         function startTimer() {
@@ -956,11 +1066,173 @@ const pos = intersectedObject.position.clone();
             }
             if (solved) {
                 stopTimer();
+                hintsLeft = 5; // Ripristina aiuti a vittoria
+                updateHintsUI();
+                
                 document.getElementById('final-time').innerText = document.getElementById('timer').innerText;
                 document.getElementById('victory-modal').classList.add('active');
                 controls.autoRotate = true;
                 controls.autoRotateSpeed = 5;
             }
+        }
+
+        // --- GEMINI AI & HINTS LOGIC ---
+        function showAIMessage(msg, duration = 0) {
+            const el = document.getElementById('ai-message');
+            document.getElementById('ai-text').innerText = msg;
+            el.classList.add('active');
+            if (duration > 0) {
+                setTimeout(() => el.classList.remove('active'), duration);
+            }
+        }
+
+        async function fetchGemini(promptText) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
+                });
+                
+                if (!response.ok) {
+                    const errTxt = await response.text();
+                    throw new Error(`Errore Server: ${response.status} - ${errTxt.substring(0, 40)}`);
+                }
+                return await response.json();
+            } catch (e) {
+                const url2 = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+                const response2 = await fetch(url2, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
+                });
+                if (!response2.ok) throw new Error("Fallback failed");
+                return await response2.json();
+            }
+        }
+
+        async function generateAIScramble() {
+            if (isAnimating) return;
+            controls.autoRotate = false;
+            showAIMessage("L'AI calcola scramble ufficiale...", 0);
+            
+            try {
+                const data = await fetchGemini("Sei un generatore di scramble WCA per il cubo di Rubik. Restituisci ESATTAMENTE 20 mosse valide separate da spazio. Usa solo le lettere R, L, U, D, F, B seguite eventualmente da ' o 2. NON SCRIVERE ASSOLUTAMENTE NESSUN ALTRO TESTO.");
+                
+                let txt = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                
+                const validMoves = txt.match(/[RLUDFB][\'2]?/gi);
+                
+                if (!validMoves || validMoves.length < 5) throw new Error("Mosse non trovate");
+                
+                showAIMessage(`Scramble WCA:\n${validMoves.join(' ')}`, 4000);
+                
+                solutionStack = [];
+                hintsLeft = 5;
+                updateHintsUI();
+                resetTimer();
+                moveCount = 0;
+                
+                const btns = document.querySelectorAll('button.action-btn');
+                btns.forEach(b => b.disabled = true);
+
+                for (const m of validMoves) {
+                    const p = parseScrambleMove(m);
+                    if (p) {
+                        rotateLayer(p.axis, p.index, p.angle, true, 120);
+                        await new Promise(r => setTimeout(r, 130));
+                    }
+                }
+                
+                moveCount = 0;
+                btns.forEach(b => b.disabled = false);
+                updateHintsUI();
+
+            } catch (e) {
+                console.warn(e);
+                showAIMessage("Servizio momentaneamente non disponibile. Scramble locale in corso...", 3000);
+                setTimeout(() => scrambleCube(20), 1000);
+            }
+        }
+
+        async function getAITip() {
+            if (hintsLeft <= 0 || isAnimating) return;
+            
+            if (solutionStack.length === 0) {
+                showAIMessage("Il cubo è già risolto, ottimo lavoro!", 3000);
+                return;
+            }
+
+            hintsLeft--;
+            updateHintsUI();
+
+            const nextMove = solutionStack[solutionStack.length - 1];
+            
+            const notationMap = {
+                "R": "faccia DESTRA in senso orario", "R'": "faccia DESTRA in senso antiorario",
+                "L": "faccia SINISTRA in senso orario", "L'": "faccia SINISTRA in senso antiorario",
+                "U": "faccia ALTA in senso orario", "U'": "faccia ALTA in senso antiorario",
+                "D": "faccia BASSA in senso orario", "D'": "faccia BASSA in senso antiorario",
+                "F": "faccia FRONTALE in senso orario", "F'": "faccia FRONTALE in senso antiorario",
+                "B": "faccia POSTERIORE in senso orario", "B'": "faccia POSTERIORE in senso antiorario",
+                "M": "strato CENTRALE VERTICALE in basso", "M'": "strato CENTRALE VERTICALE in alto",
+                "E": "strato CENTRALE ORIZZONTALE a destra", "E'": "strato CENTRALE ORIZZONTALE a sinistra",
+                "S": "strato CENTRALE FRONTALE in orario", "S'": "strato CENTRALE FRONTALE in antiorario"
+            };
+            
+            const moveDesc = notationMap[nextMove] || nextMove;
+
+            showAIMessage("L'AI sta intervenendo sul cubo...", 0);
+            
+            try {
+                const prompt = `Agisci come un amichevole e sintetico maestro di Cubo di Rubik. Stai aiutando fisicamente il giocatore facendo tu la prossima mossa.
+                Hai appena fatto tu questa mossa per lui: ruotare la ${moveDesc}.
+                Scrivi un messaggio in italiano dicendo che hai appena fatto tu questa mossa e incoraggiando il giocatore (es. "Ho ruotato io la faccia... Continua così!"). Non superare le 15 parole.`;
+                
+                const data = await fetchGemini(prompt);
+                let txt = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!txt) throw new Error("No text");
+                
+                txt = txt.replace(/\*/g, '').trim();
+                
+                showAIMessage(`💡 ${txt}`, 6000);
+            } catch (e) {
+                console.warn("AI Fallback", e);
+                showAIMessage(`💡 Ti do una mano: ho ruotato la ${moveDesc} per te. Continua!`, 5000);
+            }
+
+            // ESECUZIONE FISICA DELLA MOSSA DA PARTE DELL'AI COACH
+            const parsedMove = parseScrambleMove(nextMove);
+            if (parsedMove) {
+                // Rotazione leggermente più lenta per far capire bene all'utente cosa sta succedendo (400ms)
+                rotateLayer(parsedMove.axis, parsedMove.index, parsedMove.angle, true, 400); 
+            }
+        }
+
+        // Funzione isolata solo per parsare i testi WCA scaricati da Gemini
+        function parseScrambleMove(m) {
+            if (!m) return null;
+            const char = m[0].toUpperCase();
+            const mod = m.length > 1 ? m.substring(1) : '';
+            let ax, idx, ang;
+            
+            switch(char) {
+                case 'R': ax='x'; idx=1; ang=-90; break;
+                case 'L': ax='x'; idx=-1; ang=90; break;
+                case 'U': ax='y'; idx=1; ang=-90; break;
+                case 'D': ax='y'; idx=-1; ang=90; break;
+                case 'F': ax='z'; idx=1; ang=-90; break;
+                case 'B': ax='z'; idx=-1; ang=90; break;
+                case 'M': ax='x'; idx=0; ang=90; break;
+                case 'E': ax='y'; idx=0; ang=90; break;
+                case 'S': ax='z'; idx=0; ang=-90; break;
+                default: return null;
+            }
+            if(mod.includes("'")) ang *= -1;
+            if(mod.includes("2")) ang *= 2;
+            
+            return {axis:ax, index:idx, angle:ang};
         }
 
         function onWindowResize() {
