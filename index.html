@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Liquid Glass Rubik's Cube</title>
-     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23111'/%3E%3Crect x='8' y='8' width='14' height='14' rx='3' fill='%23ff0040'/%3E%3Crect x='25' y='8' width='14' height='14' rx='3' fill='%2300f3ff'/%3E%3Crect x='42' y='8' width='14' height='14' rx='3' fill='%23ffcc00'/%3E%3Crect x='8' y='25' width='14' height='14' rx='3' fill='%2300ff66'/%3E%3Crect x='25' y='25' width='14' height='14' rx='3' fill='%23ff6600'/%3E%3Crect x='42' y='25' width='14' height='14' rx='3' fill='%23ffffff'/%3E%3Crect x='8' y='42' width='14' height='14' rx='3' fill='%23ffcc00'/%3E%3Crect x='25' y='42' width='14' height='14' rx='3' fill='%23ff0040'/%3E%3Crect x='42' y='42' width='14' height='14' rx='3' fill='%230066ff'/%3E%3C/svg%3E">
     <style>
         :root {
             --glass-bg: rgba(20, 20, 25, 0.6);
@@ -504,7 +503,7 @@
         const soundEngine = new SoundEngine();
 
         // --- Variabili Globali & Config ---
-        const apiKey = "AIzaSyAXW0vPdCfftFj4eLzet94LSGHHVKNXld8"; // API Key per Gemini
+        const apiKey = "AIzaSyA2p8oktZDvskLdb18yH4IoXYPNEoUphqg"; // Nuova API Key per Gemini
         
         let scene, camera, renderer, controls;
         let cubes = [];
@@ -1019,7 +1018,7 @@
             }
             moveCount = 0;
             btns.forEach(b => b.disabled = false);
-            updateHintsUI(); // Ensure it reflects correctly
+            updateHintsUI(); 
         }
 
         function resetCube() {
@@ -1067,7 +1066,7 @@
             }
             if (solved) {
                 stopTimer();
-                hintsLeft = 5; // Ripristina aiuti a vittoria
+                hintsLeft = 5; 
                 updateHintsUI();
                 
                 document.getElementById('final-time').innerText = document.getElementById('timer').innerText;
@@ -1206,12 +1205,10 @@
             // ESECUZIONE FISICA DELLA MOSSA DA PARTE DELL'AI COACH
             const parsedMove = parseScrambleMove(nextMove);
             if (parsedMove) {
-                // Rotazione leggermente più lenta per far capire bene all'utente cosa sta succedendo (400ms)
                 rotateLayer(parsedMove.axis, parsedMove.index, parsedMove.angle, true, 400); 
             }
         }
 
-        // Funzione isolata solo per parsare i testi WCA scaricati da Gemini
         function parseScrambleMove(m) {
             if (!m) return null;
             const char = m[0].toUpperCase();
