@@ -1088,7 +1088,7 @@
         }
 
         async function fetchGemini(promptText) {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`;
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
             try {
                 const response = await fetch(url, {
                     method: 'POST',
